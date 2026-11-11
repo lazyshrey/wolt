@@ -1,6 +1,20 @@
 # ⚡ Wolt — Native macOS Battery & Power Adapter Monitor
 
-A lightweight, clutter-free macOS menu bar application designed in Apple's native design language. Built with **Swift 6**, **SwiftUI**, and native **IOKit** power management APIs.
+A lightweight, clutter-free macOS menu bar application designed in Apple's native design language. Built with **Swift 6**, **SwiftUI**, and native **IOKit** power management APIs for Apple Silicon.
+
+---
+
+## 📸 App Preview
+
+<p align="center">
+  <img src="assets/screenshots/wolt-power-preview.jpg" width="48%" alt="Wolt Power Tab Preview" />
+  &nbsp;
+  <img src="assets/screenshots/wolt-health-preview.jpg" width="48%" alt="Wolt Health Tab Preview" />
+</p>
+
+| ⚡ **Live Power Flow & Discharge** | 🔋 **Battery Health & Thermal Telemetry** |
+| :---: | :---: |
+| Real-time system load, remaining runtime, live PMU wattage meter | True chemical health %, hardware pack temperature (°C & °F), cycle count |
 
 ---
 
@@ -8,10 +22,12 @@ A lightweight, clutter-free macOS menu bar application designed in Apple's nativ
 
 Unlike other battery monitors that overwhelm you with multi-tab dashboards, constant low-battery notifications, or background battery drain, **Wolt** keeps things minimalist, elegant, and fast.
 
-* **⚡ Power Adapter & Live Meter:** Instantly detect the connected power adapter (e.g. *Apple 70W USB-C Adapter*), its rated wattage, and the real-time power flow into your Mac and battery.
-* **⚠️ Slow Charger Detection:** Warns you in amber if an underpowered adapter or weak cable is plugged in (preventing slow battery drain under load).
-* **🗂️ Segmented Tabs:** Keeps the UI clean and calm. Detailed technical metrics (voltage, current, cycles) are neatly organized in separate tabs rather than crammed into one panel.
+* **⚡ Power Adapter & Live Meter:** Instantly detect the connected power adapter (e.g. *Xiaomi 67W Charger*, *Apple 70W USB-C Adapter*), its rated wattage, and the real-time power flow into your Mac and battery.
+* **🌡️ Live Battery Pack Temperature:** Direct hardware sensor extraction from `AppleSmartBatteryPack` in Celsius and Fahrenheit with thermal state badges (*Cool*, *Warm*, *Elevated*).
+* **🔌 USB-IF Vendor ID Decoding:** Reads physical USB-PD vendor IDs directly from hardware registers to accurately identify third-party chargers (Xiaomi, Apple, Anker, Ugreen, Samsung).
+* **🔄 Dual-Proportion Power Flow:** Intelligently visualizes charging mode vs supplemental battery assist when system demand exceeds charger supply.
 * **🔋 Native Battery Health:** Real hardware cycle count, maximum capacity %, and factory design capacity.
+* **🚀 Dual-Engine Startup:** Native `SMAppService` + User `LaunchAgent` for 100% reliable launch-at-login across all macOS restarts.
 * **🪶 0% Bloat, < 1MB Size:** No third-party dependencies, no background daemons, zero tracking.
 
 ---
@@ -22,32 +38,33 @@ Wolt sits discreetly in your macOS menu bar. Clicking it opens a native transluc
 
 ### 1. ⚡ Power Flow Tab (Default View)
 * **When Plugged In:**
-  * Shows your connected adapter name (e.g., `Apple 70W USB-C Power Adapter`).
-  * Displays rated wattage (e.g., `70W`).
+  * Shows your connected adapter name (e.g., `Xiaomi 67W Charger`, `Apple 70W USB-C Power Adapter`).
+  * Displays rated wattage (e.g., `67W`).
   * Shows visual power flow: Wall Adapter ──▶ Battery Charging + System Draw.
-  * Status badge: `⚡ Optimal Fast Charging` or `⚠️ Slow Charging Warning`.
+  * Status badge: `⚡ Optimal USB-PD Delivery`, `Supplemental Battery Mode`, or `Standby`.
 * **When on Battery:**
   * Displays a circular battery ring with percentage.
-  * Live discharge rate in Watts (e.g., `3.28 W`).
-  * Remaining runtime estimate (e.g., `13h 31m remaining`).
+  * Live discharge rate in Watts (e.g., `3.61 W`).
+  * Remaining runtime estimate (e.g., `9h 17m remaining`).
 
 ### 2. 🔋 Health & Specs Tab
-* **Maximum Capacity Gauge:** Circular indicator of true chemical battery health.
+* **Maximum Capacity Gauge:** Circular indicator of true chemical battery health (100% against factory design).
+* **Battery Pack Temperature:** Real-time sensor readout (e.g., `29.4°C / 84.9°F`) with thermal state monitoring.
 * **Cycle Counter:** Hardware cycle count with longevity progress bar (rated for 1,000 Apple Silicon cycles).
 * **Technical Metrics:**
-  * Current Voltage (`12.06 V`)
-  * Current Flow (`-272 mA`)
-  * Battery Capacity (`3,011 / 4,668 mAh`)
+  * Current Voltage (`11.98 V`)
+  * Current Flow (`-337 mA`)
+  * Battery Capacity (`2,890 / 4,653 mAh`)
   * Hardware Condition (`Normal / Healthy`)
 
 ### 3. ⚙️ Settings Tab
 * **Menu Bar Appearance:**
-  * `Icon Only` — Clean battery glyph.
-  * `Percentage` — Minimalist `%` display.
-  * `Live Wattage` — Displays live wattage directly in the menu bar (e.g., `⚡ 70W` or `3.3W`).
-  * `Icon + Wattage` (Default) — The best of both worlds.
-* **Launch at Login:** Toggle to start Wolt automatically on boot.
-* **Quick Actions:** Manual Refresh and Quit Wolt buttons.
+  * `Icon + Percentage` (Default) — Clean battery glyph + live percentage.
+  * `Percentage Only` — Minimalist `%` display.
+  * `Icon Only` — Subtle battery glyph.
+  * `Icon + Wattage` — Displays live wattage directly in the menu bar.
+* **Launch at Login:** Toggle to start Wolt automatically on boot with live registration confirmation.
+* **Branding & Actions:** High-resolution retina app icon, manual refresh, and quit actions.
 
 ---
 

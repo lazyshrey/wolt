@@ -13,7 +13,7 @@ mkdir -p "$RESOURCES_DIR"
 mkdir -p "$CACHE_DIR"
 
 # Process App Icon (from assets/ if user provided, or fallback to Resources/AppIcon.icns)
-USER_ICON=$(find assets -maxdepth 1 -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \) 2>/dev/null | head -n 1)
+USER_ICON=$(find assets -maxdepth 1 -type f \( -iname "*icon*.png" -o -iname "*icon*.jpg" -o -iname "*logo*.png" -o -iname "*logo*.jpg" -o -name "AppIcon.*" \) 2>/dev/null | head -n 1)
 USER_ICNS=$(find assets -maxdepth 1 -type f -name "*.icns" 2>/dev/null | head -n 1)
 
 if [ -n "$USER_ICNS" ]; then
