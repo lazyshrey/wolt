@@ -97,4 +97,18 @@ if [ -d "/Applications" ] && [ -w "/Applications" ]; then
     echo "✨ Installed to /Applications/Wolt.app"
 fi
 
+# Package DMG if requested
+if [ "$1" = "--dmg" ] || [ "$1" = "dmg" ]; then
+    echo "💿 Packaging DMG installer..."
+    mkdir -p dist
+    DMG_TMP="/tmp/Wolt-DMG-Staging"
+    rm -rf "$DMG_TMP" dist/Wolt-1.0.0-arm64.dmg
+    mkdir -p "$DMG_TMP"
+    cp -R "$APP_DIR" "$DMG_TMP/"
+    ln -s /Applications "$DMG_TMP/Applications"
+    hdiutil create -volname "Wolt" -srcfolder "$DMG_TMP" -ov -format UDZO "dist/Wolt-1.0.0-arm64.dmg" >/dev/null 2>&1
+    rm -rf "$DMG_TMP"
+    echo "✨ Production DMG created: dist/Wolt-1.0.0-arm64.dmg"
+fi
+
 echo "✅ Successfully built $APP_DIR"
