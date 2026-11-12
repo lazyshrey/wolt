@@ -58,4 +58,4 @@ Wolt is a native, ultra-lightweight menu bar companion that connects directly to
 
 | Asset | SHA-256 Checksum |
 | :--- | :--- |
-| **`Wolt-1.0.0-arm64.dmg`** | `c1b1f5ab58f5239ec7547cea5e2da2f0aed0a058551f9d287793d79b454dbccc` |
+| **`Wolt-1.0.0-arm64.dmg`** | `dab3b77ff9aeb748dc1cd5845b272c0a639602e948a808abfbd18ee1825be295` |
