@@ -48,15 +48,16 @@ public final class AppSettings: ObservableObject {
         
         let smStatus = SMAppService.mainApp.status
         let smEnabled = (smStatus == .enabled)
-        let launchAgentExists = FileManager.default.fileExists(atPath: Self.launchAgentPlistURL.path)
         let savedPreference = defaults.bool(forKey: "launchAtLogin")
         
-        let isEnabled = smEnabled || launchAgentExists || savedPreference
-        self.launchAtLogin = isEnabled
+        self.launchAtLogin = smEnabled || savedPreference
         
-        if isEnabled {
-            // Keep system registration synced and up to date with active binary path
-            self.applyLaunchAtLogin(true)
+        // Purge any duplicate/legacy LaunchAgent plist so macOS launchd only has one trigger
+        Self.purgeLegacyLaunchAgent()
+        
+        if self.launchAtLogin && !smEnabled {
+            // Re-sync with SMAppService without spawning any secondary processes
+            try? SMAppService.mainApp.register()
         }
     }
     
@@ -69,27 +70,18 @@ public final class AppSettings: ObservableObject {
     }
     
     private func enableLaunchAtLogin() {
-        var smSucceeded = false
         let service = SMAppService.mainApp
-        if service.status != .enabled {
-            do {
+        do {
+            if service.status != .enabled {
                 try service.register()
-                smSucceeded = true
-            } catch {
-                NSLog("[Wolt] SMAppService.register error: \(error.localizedDescription)")
             }
-        } else {
-            smSucceeded = true
-        }
-        
-        // High-reliability LaunchAgent backup (ensures startup across all macOS configurations)
-        createLaunchAgentPlist()
-        bootstrapLaunchAgent(plistURL: Self.launchAgentPlistURL)
-        
-        if smSucceeded {
             launchAtLoginStatusMessage = "Active (Registered with macOS Login Items)"
-        } else {
-            launchAtLoginStatusMessage = "Active (Configured via LaunchAgent)"
+        } catch {
+            NSLog("[Wolt] SMAppService.register error: \(error.localizedDescription)")
+            // Fallback: create LaunchAgent plist strictly for NEXT reboot.
+            // NEVER invoke launchctl bootstrap while running, to prevent duplicate process spawning!
+            createLaunchAgentPlist()
+            launchAtLoginStatusMessage = "Active (Configured for next login)"
         }
     }
     
@@ -103,25 +95,25 @@ public final class AppSettings: ObservableObject {
             }
         }
         
-        bootoutLaunchAgent()
-        removeLaunchAgentPlist()
+        Self.purgeLegacyLaunchAgent()
         launchAtLoginStatusMessage = ""
     }
     
-    private func bootstrapLaunchAgent(plistURL: URL) {
-        let uid = getuid()
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-        task.arguments = ["bootstrap", "gui/\(uid)", plistURL.path]
-        try? task.run()
-    }
-    
-    private func bootoutLaunchAgent() {
-        let uid = getuid()
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-        task.arguments = ["bootout", "gui/\(uid)/com.wolt.mac"]
-        try? task.run()
+    public static func purgeLegacyLaunchAgent() {
+        let plistURL = launchAgentPlistURL
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: plistURL.path) {
+            // Boot out from launchd domain if still loaded
+            let uid = getuid()
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+            task.arguments = ["bootout", "gui/\(uid)/com.wolt.mac"]
+            try? task.run()
+            task.waitUntilExit()
+            
+            try? fileManager.removeItem(at: plistURL)
+            NSLog("[Wolt] Purged duplicate LaunchAgent plist at %@", plistURL.path)
+        }
     }
     
     private func createLaunchAgentPlist() {
@@ -152,14 +144,6 @@ public final class AppSettings: ObservableObject {
         
         if let data = try? PropertyListSerialization.data(fromPropertyList: plistContent, format: .xml, options: 0) {
             try? data.write(to: plistURL, options: .atomic)
-        }
-    }
-    
-    private func removeLaunchAgentPlist() {
-        let fileManager = FileManager.default
-        let plistURL = Self.launchAgentPlistURL
-        if fileManager.fileExists(atPath: plistURL.path) {
-            try? fileManager.removeItem(at: plistURL)
         }
     }
 }
