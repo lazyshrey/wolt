@@ -364,20 +364,9 @@ public final class PowerService: ObservableObject {
                     adapterCurrentAmps = max(0.0, parseMilliwatts(ptData["SystemCurrentIn"]))
                 }
                 
-                // Read PowerDistribution as secondary confirmation for wall input
-                if let pDist = dict["PowerDistribution"] as? [String: Any] {
-                    let ipdPower = parseMilliwatts(pDist["IPDInputPower"])
-                    if rawChargerInWatts < 0.5 && ipdPower > 0.5 {
-                        rawChargerInWatts = ipdPower
-                    }
-                    let ipdVoltage = parseMilliwatts(pDist["IPDInputVoltage"])
-                    if adapterVoltageVolts < 0.5 && ipdVoltage > 0.5 {
-                        adapterVoltageVolts = ipdVoltage
-                    }
-                    let ipdCurrent = parseMilliwatts(pDist["IPDInputCurrent"])
-                    if adapterCurrentAmps < 0.05 && ipdCurrent > 0.05 {
-                        adapterCurrentAmps = ipdCurrent
-                    }
+                // Fallback for negotiated voltage only if PMU hasn't reported SystemVoltageIn yet
+                if adapterVoltageVolts < 0.5, let pDist = dict["PowerDistribution"] as? [String: Any] {
+                    adapterVoltageVolts = parseMilliwatts(pDist["IPDInputVoltage"])
                 }
             }
         }
@@ -439,8 +428,6 @@ public final class PowerService: ObservableObject {
             finalBatteryPowerWatts = -finalSystemLoadWatts
         } else {
             // Physically connected to AC power
-            finalBatteryPowerWatts = abs(rawBatteryPowerWatts) > 0.05 ? rawBatteryPowerWatts : directBatteryWatts
-            
             let baselineLoad: Double
             if rawSystemLoadWatts > 0.5 {
                 baselineLoad = rawSystemLoadWatts
@@ -449,16 +436,54 @@ public final class PowerService: ObservableObject {
             }
             finalSystemLoadWatts = max(1.8, baselineLoad + cpuDeltaWatts)
             
-            // Total wall draw
-            let vTimesI = adapterVoltageVolts * adapterCurrentAmps
+            // Raw battery wattage reading directly from hardware
+            let hardwareBatteryWatts = abs(rawBatteryPowerWatts) > 0.05 ? rawBatteryPowerWatts : directBatteryWatts
+            
+            // 1. Determine True Live Wall Draw (Instantaneous, not contract max)
+            let vTimesI = (adapterVoltageVolts > 0 && adapterCurrentAmps > 0) ? (adapterVoltageVolts * adapterCurrentAmps) : 0.0
+            
             if rawChargerInWatts > 0.5 {
-                finalChargerInWatts = max(1.0, rawChargerInWatts + cpuDeltaWatts)
+                finalChargerInWatts = max(1.0, rawChargerInWatts + (cpuDeltaWatts > 0 ? cpuDeltaWatts : 0.0))
             } else if vTimesI > 0.5 {
                 finalChargerInWatts = vTimesI
-            } else if finalBatteryPowerWatts > 0.5 {
-                finalChargerInWatts = finalBatteryPowerWatts + finalSystemLoadWatts
+            } else if hardwareBatteryWatts > 0.5 {
+                // If battery is actively taking charge, wall must be delivering at least battery + system
+                finalChargerInWatts = hardwareBatteryWatts + finalSystemLoadWatts
             } else {
-                finalChargerInWatts = 0.0
+                // During initial handshake / standby before PMU telemetry updates
+                // The connected AC adapter powers the system load directly
+                finalChargerInWatts = finalSystemLoadWatts
+            }
+            
+            // 2. Eliminate 30-45s Stale Negative Lag from Battery Gas Gauge:
+            // When connected to AC power and wall power is active,
+            // the battery cannot be discharging into the Mac unless system load exceeds wall input.
+            // Any negative battery reading when wall >= system is STALE rolling-average lag from pre-plug!
+            if finalChargerInWatts >= (finalSystemLoadWatts - 0.5) {
+                if hardwareBatteryWatts > 0.5 {
+                    // Actively charging cells
+                    finalBatteryPowerWatts = hardwareBatteryWatts
+                } else if percentage >= 95 || !isCharging {
+                    // Battery full / top-off: Hardware Power Bypass active
+                    finalBatteryPowerWatts = 0.0
+                } else {
+                    // Not full: surplus power goes to charging
+                    let surplus = finalChargerInWatts - finalSystemLoadWatts
+                    finalBatteryPowerWatts = max(0.0, surplus)
+                }
+            } else {
+                // Legitimate Supplemental Battery Mode:
+                // Wall delivery is genuinely less than system demand (e.g. weak 5W charger under high load)
+                if hardwareBatteryWatts < -0.5 {
+                    finalBatteryPowerWatts = hardwareBatteryWatts
+                } else {
+                    finalBatteryPowerWatts = -(finalSystemLoadWatts - finalChargerInWatts)
+                }
+            }
+            
+            // 3. Ensure live current reflects true instantaneous draw (P = V * I)
+            if adapterVoltageVolts > 0.5 && (adapterCurrentAmps < 0.05 || (adapterVoltageVolts * adapterCurrentAmps > finalChargerInWatts * 1.5)) {
+                adapterCurrentAmps = finalChargerInWatts / adapterVoltageVolts
             }
         }
         

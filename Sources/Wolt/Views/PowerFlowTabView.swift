@@ -56,7 +56,7 @@ struct PowerFlowTabView: View {
                 
                 // 2. Power Flow Split (Juicy Power Flow Distribution)
                 let isCharging = t.batteryPowerWatts > 0.05
-                let isAssisting = t.batteryPowerWatts < -0.05
+                let isAssisting = t.batteryPowerWatts < -0.5 && (t.chargerInputWatts < t.systemLoadWatts - 0.5 || t.chargerInputWatts <= 0.5)
                 
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 6) {
@@ -295,11 +295,11 @@ struct PowerFlowTabView: View {
                         Text("\(t.adapter.name) Connected (Idle / Standby)")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(.secondary)
-                    } else if t.percentage >= 98 {
+                    } else if t.percentage >= 95 || abs(t.batteryPowerWatts) <= 0.05 {
                         Image(systemName: "checkmark.seal.fill")
                             .font(.system(size: 11))
                             .foregroundStyle(.green)
-                        Text("Battery Full (Wall Power Bypass Active)")
+                        Text(t.percentage >= 98 ? "Battery Full (Wall Power Bypass Active)" : "Hardware Power Bypass Active (Wall Powered)")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(.secondary)
                     } else {

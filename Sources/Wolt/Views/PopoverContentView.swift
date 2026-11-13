@@ -69,7 +69,7 @@ public struct PopoverContentView: View {
                 Spacer()
                 
                 // Mini wattage badge
-                let isAssisting = t.isPluggedIn && t.batteryPowerWatts < -0.05
+                let isAssisting = t.isPluggedIn && t.batteryPowerWatts < -0.5 && (t.chargerInputWatts < t.systemLoadWatts - 0.5 || t.chargerInputWatts <= 0.5)
                 let displayWatts: Double = {
                     if t.isPluggedIn {
                         if t.chargerInputWatts > 0.05 {

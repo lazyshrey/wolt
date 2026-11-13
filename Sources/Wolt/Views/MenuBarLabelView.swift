@@ -37,10 +37,17 @@ struct MenuBarLabelView: View {
         if t.isPluggedIn {
             let adapterStr = t.adapter.ratedWatts > 0 ? "\(t.adapter.name) (\(t.adapter.ratedWatts)W)" : t.adapter.name
             let inStr = String(format: "%.1fW", t.chargerInputWatts)
-            let battStr = String(format: "%.1fW", t.batteryPowerWatts)
             let sysStr = String(format: "%.1fW", t.systemLoadWatts)
+            let battLine: String
+            if t.batteryPowerWatts > 0.05 {
+                battLine = "├─ Battery Charge: +\(String(format: "%.1fW", t.batteryPowerWatts))"
+            } else if t.batteryPowerWatts < -0.05 {
+                battLine = "├─ Battery Assist: \(String(format: "%.1fW", t.batteryPowerWatts))"
+            } else {
+                battLine = "├─ Battery Bypass: 0.0W"
+            }
             let timeStr = t.timeRemainingMinutes != nil ? " • \(t.formattedTimeRemaining) to full" : ""
-            return "⚡ \(adapterStr)\nTotal Draw: \(inStr)\n├─ Battery Charge: +\(battStr)\n└─ Mac System Load: \(sysStr)\nBattery: \(t.percentage)%\(timeStr)"
+            return "⚡ \(adapterStr)\nTotal Draw: \(inStr)\n\(battLine)\n└─ Mac System Load: \(sysStr)\nBattery: \(t.percentage)%\(timeStr)"
         } else {
             let flowStr = String(format: "%.1fW", t.systemLoadWatts > 0 ? t.systemLoadWatts : t.liveWatts)
             return "🔋 Battery: \(t.percentage)% (Discharging)\nSystem Load: \(flowStr)\nRemaining: \(t.formattedTimeRemaining)"
