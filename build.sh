@@ -52,11 +52,8 @@ SWIFT_SOURCES=(
     Sources/Wolt/Models/BatteryModel.swift
     Sources/Wolt/Models/AppSettings.swift
     Sources/Wolt/Services/PowerService.swift
-    Sources/Wolt/Views/PowerFlowTabView.swift
-    Sources/Wolt/Views/HealthTabView.swift
-    Sources/Wolt/Views/SettingsTabView.swift
+    Sources/Wolt/Services/StatusBarController.swift
     Sources/Wolt/Views/PopoverContentView.swift
-    Sources/Wolt/Views/MenuBarLabelView.swift
     Sources/Wolt/App.swift
 )
 
