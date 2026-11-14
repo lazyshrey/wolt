@@ -102,11 +102,19 @@ public final class PowerService: ObservableObject {
     }
     
     // MARK: - Low Power Mode Management
+    nonisolated private static var pmsetPath: String {
+        if FileManager.default.fileExists(atPath: "/usr/bin/pmset") {
+            return "/usr/bin/pmset"
+        }
+        return "/usr/sbin/pmset"
+    }
+    
     public func checkPasswordlessConfig() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
+            let path = Self.pmsetPath
             let task = Process()
             task.executableURL = URL(fileURLWithPath: "/usr/bin/sudo")
-            task.arguments = ["-n", "/usr/sbin/pmset", "-g"]
+            task.arguments = ["-n", path, "-g"]
             var isConfigured = false
             do {
                 try task.run()
@@ -127,11 +135,12 @@ public final class PowerService: ObservableObject {
     
     public func setLowPowerMode(enabled: Bool) {
         let targetArg = enabled ? "1" : "0"
+        let path = Self.pmsetPath
         
         // 1. Silent non-interactive attempt (0 prompts if passwordless is configured)
         let silentProcess = Process()
         silentProcess.executableURL = URL(fileURLWithPath: "/usr/bin/sudo")
-        silentProcess.arguments = ["-n", "/usr/sbin/pmset", "-a", "lowpowermode", targetArg]
+        silentProcess.arguments = ["-n", path, "-a", "lowpowermode", targetArg]
         
         do {
             try silentProcess.run()
@@ -148,7 +157,7 @@ public final class PowerService: ObservableObject {
         
         // 2. Fallback: prompt macOS native authentication (Touch ID / Admin password)
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let scriptSource = "do shell script \"/usr/sbin/pmset -a lowpowermode \(targetArg)\" with administrator privileges"
+            let scriptSource = "do shell script \"\(path) -a lowpowermode \(targetArg)\" with administrator privileges"
             var error: NSDictionary?
             if let script = NSAppleScript(source: scriptSource) {
                 script.executeAndReturnError(&error)
@@ -163,8 +172,9 @@ public final class PowerService: ObservableObject {
     public func setupPasswordlessRule(completion: @escaping @Sendable (Bool) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let user = NSUserName()
-            let rule = "\(user) ALL=(ALL) NOPASSWD: /usr/sbin/pmset"
-            let scriptSource = "do shell script \"echo '\(rule)' > /etc/sudoers.d/wolt-pmset && chmod 0440 /etc/sudoers.d/wolt-pmset\" with administrator privileges"
+            let path = Self.pmsetPath
+            let rule = "\(user) ALL=(ALL) NOPASSWD: \(path)"
+            let scriptSource = "do shell script \"mkdir -p /etc/sudoers.d && echo '\(rule)' > /etc/sudoers.d/wolt-pmset && chmod 0440 /etc/sudoers.d/wolt-pmset\" with administrator privileges"
             var error: NSDictionary?
             let success: Bool
             if let script = NSAppleScript(source: scriptSource) {
