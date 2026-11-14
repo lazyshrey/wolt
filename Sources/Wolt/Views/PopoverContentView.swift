@@ -39,74 +39,58 @@ public struct PopoverContentView: View {
         let t = powerService.telemetry
         
         VStack(spacing: 14) {
-            // Header Bar
+            // Clean Header Bar (No redundant duplicate numbers)
             HStack(alignment: .center) {
-                HStack(spacing: 8) {
-                    Image(systemName: t.isCharging ? "bolt.batteryblock.fill" : "battery.75percent")
+                HStack(spacing: 9) {
+                    Image(systemName: t.isCharging ? "bolt.batteryblock.fill" : (t.percentage <= 20 ? "battery.25percent" : "battery.75percent"))
                         .font(.system(size: 20))
-                        .foregroundStyle(t.isCharging ? .green : .accentColor)
+                        .foregroundStyle(t.isCharging ? .green : (t.percentage <= 20 ? .red : .primary))
                     
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
                             Text("\(t.percentage)%")
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
                             
                             if t.isPluggedIn {
                                 Text(t.isCharging ? "Charging" : "Plugged In")
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .font(.system(size: 10.5, weight: .semibold))
                                     .foregroundStyle(t.isCharging ? .green : .secondary)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
-                                    .background(t.isCharging ? Color.green.opacity(0.15) : Color.primary.opacity(0.06))
+                                    .background(t.isCharging ? Color.green.opacity(0.12) : Color.primary.opacity(0.06))
                                     .clipShape(Capsule())
                             }
                         }
                         
-                        Text(t.isPluggedIn ? "\(t.adapter.name) Connected" : "\(t.formattedTimeRemaining) remaining")
+                        Text(t.isPluggedIn ? t.adapter.name : (t.timeRemainingMinutes != nil ? "\(t.formattedTimeRemaining) remaining" : "Running on Battery"))
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
                     }
                 }
                 
                 Spacer()
                 
-                // Mini wattage badge
-                let isAssisting = t.isPluggedIn && t.batteryPowerWatts < -0.5 && (t.chargerInputWatts < t.systemLoadWatts - 0.5 || t.chargerInputWatts <= 0.5)
-                let displayWatts: Double = {
-                    if t.isPluggedIn {
-                        if t.chargerInputWatts > 0.05 {
-                            return t.chargerInputWatts
-                        } else if isAssisting {
-                            return t.systemLoadWatts
-                        } else {
-                            return 0.0
-                        }
-                    } else {
-                        return t.systemLoadWatts > 0 ? t.systemLoadWatts : t.liveWatts
+                // Status Pill (Clean Apple style context, avoids repeating body watts)
+                if t.isPluggedIn {
+                    if t.adapter.ratedWatts > 0 {
+                        Text("\(t.adapter.ratedWatts)W Adapter")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3.5)
+                            .background(Color.primary.opacity(0.05))
+                            .clipShape(Capsule())
                     }
-                }()
-                let suffix: String = {
-                    if t.isPluggedIn {
-                        if t.chargerInputWatts > 0.05 {
-                            return " In"
-                        } else if isAssisting {
-                            return " Load"
-                        } else {
-                            return " In"
-                        }
-                    }
-                    return ""
-                }()
-                
-                Text(String(format: "%.1fW%@", displayWatts, suffix))
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(t.isCharging ? .green : (isAssisting ? .orange : .secondary))
-                    .contentTransition(.numericText())
-                    .animation(.smooth(duration: 0.35), value: displayWatts)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.primary.opacity(0.05))
-                    .clipShape(Capsule())
+                } else if let time = t.timeRemainingMinutes, time > 0 {
+                    Text("\(t.formattedTimeRemaining) left")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3.5)
+                        .background(Color.primary.opacity(0.05))
+                        .clipShape(Capsule())
+                }
             }
             .padding(.horizontal, 4)
             .padding(.top, 4)
