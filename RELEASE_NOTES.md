@@ -1,4 +1,4 @@
-# Release v1.0.0 — Wolt for macOS (Apple Silicon)
+# Release v1.1 — Wolt for macOS (Apple Silicon)
 
 > **Real-time battery & power flow intelligence engine for Apple Silicon Macs.**
 
@@ -6,49 +6,45 @@ Wolt is a native, ultra-lightweight menu bar companion that connects directly to
 
 ---
 
-### ⚡ What's New in v1.0.0
+### ⚡ What's New in v1.1
 
-#### 1. Live Power Flow Distribution Engine
-* **Direct PMU Telemetry:** Queries Apple Silicon `PowerTelemetryData` hardware registers to display true instantaneous wattage to the milliwatt.
-* **Dual-Proportion Power Flow Bar:**
-  * **Charging Mode:** Visualizes power split between battery cell charging (Green) and Mac system consumption (Blue).
-  * **Supplemental Battery Mode:** When system load exceeds charger delivery (or charger is idle), dynamically visualizes supplemental power assist from battery (Orange) and wall input (Blue).
-* **Zero Formatting Anomalies:** Strict sign enforcement with accurate absolute wattages and mathematically balanced percentages.
+#### 1. Native `NSPopover` with Pointer Notch & Spring Animation
+* Replaced detached window panel with a true native AppKit `NSPopover` anchored directly to your menu bar icon.
+* Features Apple's native pointer beak/notch and silky-smooth downward slide-in spring physics.
+* Automatically renders the system active capsule highlight around the menu bar button while open.
 
-#### 2. USB-IF Vendor ID Decoding
-* Detects authoritative USB-PD Vendor IDs directly from `FedDetails` hardware ports.
-* Accurately brands third-party chargers (e.g. **Xiaomi 67W Charger**, **Anker**, **Ugreen**, **Samsung**, **Apple**) instead of generic "pd charger" or false vendor names.
+#### 2. Home Screen Low Power Mode Toggle
+* Effortlessly toggle Low Power Mode on and off with a single click directly from the popover home screen.
+* Features real-time bidirectional synchronization with macOS System Settings and Control Center via `NSProcessInfoPowerStateDidChange`.
+* Visual status feedback: glows in native Apple amber/yellow (`[leaf.fill Low Power]`) and adapts the battery level bar when active.
 
-#### 3. Battery Health & Real-Time Thermal Sensing
-* **Hardware Thermal Telemetry:** Direct temperature sensor extraction from `AppleSmartBatteryPack` in Celsius and Fahrenheit with thermal state badges (*Optimal (Cool)*, *Warm*, *Elevated*).
-* **Longevity & Degradation Analytics:** Real-time chemical health percentage against factory design capacity, cycle count progress bar (1,000-cycle rating), voltage, and instantaneous amperage.
+#### 3. Dedicated Battery Health & Electrical Diagnostics Page
+* Accessible via a clean navigation link on the home screen with instant `< Back` navigation.
+* **Live Current Drain / Flow:** Real-time milliampere (mA) consumption (e.g. `209 mA`).
+* **Pack Voltage & Wattage:** High-precision voltage (`12.40 V`) and live battery power flow (`2.59 W`).
+* **Capacity Analytics:** Chemical maximum health percentage, current charge vs. design capacity in mAh, and rated hardware cycle counts (`4 / 1,000`).
 
-#### 4. Adaptive Energy-Saving Architecture
-* **Active Mode (Popover Open):** Calm, smooth 2.0-second refresh cadence with native `.numericText()` continuous number rolling.
-* **Idle Mode (Popover Closed):** Relaxes to a 10.0-second background heartbeat at **0.0% CPU usage**, respecting macOS App Nap.
-* **Instant AC Transitions:** Zero-latency kernel interrupts (`IOPSNotificationCreateRunLoopSource`) on cable plug/unplug with immediate physical pin detection (`ExternalConnected`).
+#### 4. Instantaneous Energy Balance & Zero Gas-Gauge Lag
+* Completely eliminated the 30–45 second Texas Instruments gas-gauge rolling-average delay when plugging in the charger through real-time energy reconciliation ($P_{\text{Wall}} = P_{\text{System}} + P_{\text{Battery}}$).
+* Instantly reflects Hardware Power Bypass mode at $\ge 95\%$ or when battery cells are idle.
 
-#### 5. Dual-Engine Launch at Login
-* **Native Apple API:** Registered with `ServiceManagement` (`SMAppService.mainApp`) for seamless macOS 13+ System Settings integration.
-* **High-Reliability LaunchAgent Fallback:** Configures `~/Library/LaunchAgents/com.wolt.mac.plist` with `RunAtLoad = true` pointing to `/Applications/Wolt.app` for guaranteed startup across all macOS reboots.
-
-#### 6. Native macOS Design
-* Modern glass blur popover interface with segmented tabs (**Power**, **Health**, **Settings**).
-* Customizable menu bar displays: *Icon + Percentage*, *Percentage Only*, *Icon Only*, *Icon + Wattage*.
-* 10-resolution Retina application icon set (`16x16` up to `1024x1024@2x`).
+#### 5. Zero Clutter & Redundancy
+* Purged all nested cards ("cards inside cards") and duplicate metric callouts.
+* Power adapter rating is shown once in the Power Source row without redundant badges.
+* Clean 270px compact native popover footprint.
 
 ---
 
 ### 💻 System Requirements
 * **Architecture:** Apple Silicon (M1, M2, M3, M4, Pro, Max, Ultra)
 * **OS Version:** macOS 14.0 Sonoma or macOS 15.0+ Sequoia / newer
-* **Permissions:** 100% Read-Only, Zero Admin / Root Privileges Required (No `sudo`, no Low Power Mode overrides)
+* **Permissions:** 100% Read-Only hardware telemetry.
 
 ---
 
 ### 📦 Installation
 
-1. Download **`Wolt-1.0.0-arm64.dmg`** below.
+1. Download **`Wolt-1.1-arm64.dmg`** below.
 2. Open the disk image and drag **Wolt** into your **Applications** folder.
 3. Launch Wolt from Applications or Spotlight. It will appear directly in your menu bar.
 
@@ -58,4 +54,4 @@ Wolt is a native, ultra-lightweight menu bar companion that connects directly to
 
 | Asset | SHA-256 Checksum |
 | :--- | :--- |
-| **`Wolt-1.0.0-arm64.dmg`** | `dab3b77ff9aeb748dc1cd5845b272c0a639602e948a808abfbd18ee1825be295` |
+| **`Wolt-1.1-arm64.dmg`** | `fc999acca24c9fb05e3bb4696d9262091190bf34cd33565a7dde315b27016693` |

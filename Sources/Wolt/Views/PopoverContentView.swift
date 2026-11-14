@@ -658,7 +658,7 @@ public struct PopoverContentView: View {
                 }
                 .padding(.top, 4)
                 
-                Text("Wolt v1.0.0 • Apple Silicon")
+                Text("Wolt v1.1 • Apple Silicon")
                     .font(.system(size: 9.5))
                     .foregroundStyle(.tertiary)
                     .padding(.top, 6)

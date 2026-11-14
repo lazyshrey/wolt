@@ -96,16 +96,19 @@ fi
 
 # Package DMG if requested
 if [ "$1" = "--dmg" ] || [ "$1" = "dmg" ]; then
-    echo "💿 Packaging DMG installer..."
+    VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist 2>/dev/null || echo "1.1")
+    echo "💿 Packaging DMG installer for Wolt v${VERSION}..."
     mkdir -p dist
+    DMG_NAME="dist/Wolt-${VERSION}-arm64.dmg"
     DMG_TMP="/tmp/Wolt-DMG-Staging"
-    rm -rf "$DMG_TMP" dist/Wolt-1.0.0-arm64.dmg
+    rm -rf "$DMG_TMP"
+    find dist -name "Wolt-*.dmg" -delete 2>/dev/null || true
     mkdir -p "$DMG_TMP"
     cp -R "$APP_DIR" "$DMG_TMP/"
     ln -s /Applications "$DMG_TMP/Applications"
-    hdiutil create -volname "Wolt" -srcfolder "$DMG_TMP" -ov -format UDZO "dist/Wolt-1.0.0-arm64.dmg" >/dev/null 2>&1
+    hdiutil create -volname "Wolt" -srcfolder "$DMG_TMP" -ov -format UDZO "$DMG_NAME" >/dev/null 2>&1
     rm -rf "$DMG_TMP"
-    echo "✨ Production DMG created: dist/Wolt-1.0.0-arm64.dmg"
+    echo "✨ Production DMG created: $DMG_NAME"
 fi
 
 echo "✅ Successfully built $APP_DIR"
