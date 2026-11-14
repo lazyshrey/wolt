@@ -88,9 +88,9 @@ public struct BatteryTelemetry: Equatable, Sendable {
         adapter: .disconnected
     )
     
-    public var formattedTimeRemaining: String {
+    public var formattedDuration: String {
         guard let minutes = timeRemainingMinutes, minutes > 0 else {
-            return isCharging ? "Calculating time to full..." : "Calculating remaining time..."
+            return "Calculating..."
         }
         let hrs = minutes / 60
         let mins = minutes % 60
@@ -99,5 +99,15 @@ public struct BatteryTelemetry: Equatable, Sendable {
         } else {
             return "\(mins)m"
         }
+    }
+    
+    public var timeRemainingDescription: String {
+        guard let minutes = timeRemainingMinutes, minutes > 0 else {
+            return isCharging ? "Calculating time to full..." : "Calculating remaining time..."
+        }
+        let hrs = minutes / 60
+        let mins = minutes % 60
+        let timeStr = hrs > 0 ? "\(hrs)h \(mins)m" : "\(mins)m"
+        return isCharging ? "\(timeStr) to full" : "\(timeStr) remaining"
     }
 }

@@ -153,11 +153,12 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
             } else {
                 battLine = "├─ Battery Bypass: 0.0W"
             }
-            let timeStr = t.timeRemainingMinutes != nil ? " • \(t.formattedTimeRemaining) to full" : ""
+            let timeStr = t.timeRemainingMinutes != nil ? " • \(t.formattedDuration) to full" : ""
             return "\(adapterStr)\nTotal Draw: \(inStr)\n\(battLine)\n└─ Mac System Load: \(sysStr)\nBattery: \(t.percentage)%\(timeStr)"
         } else {
             let flowStr = String(format: "%.1fW", t.systemLoadWatts > 0 ? t.systemLoadWatts : t.liveWatts)
-            return "Battery: \(t.percentage)% (Discharging)\nSystem Load: \(flowStr)\nRemaining: \(t.formattedTimeRemaining)"
+            let remainStr = t.timeRemainingMinutes != nil ? "\(t.formattedDuration) remaining" : "Calculating..."
+            return "Battery: \(t.percentage)% (Discharging)\nSystem Load: \(flowStr)\nRemaining: \(remainStr)"
         }
     }
 }

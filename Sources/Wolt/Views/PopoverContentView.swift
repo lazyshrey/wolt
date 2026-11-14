@@ -64,6 +64,43 @@ public struct PopoverContentView: View {
                     
                     // Settings Content
                     VStack(spacing: 12) {
+                        // Low Power Mode Toggle
+                        VStack(alignment: .leading, spacing: 4) {
+                            Toggle(isOn: Binding(
+                                get: { powerService.isLowPowerMode },
+                                set: { powerService.setLowPowerMode(enabled: $0) }
+                            )) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "leaf.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.green)
+                                    Text("Low Power Mode")
+                                        .font(.system(size: 12))
+                                }
+                            }
+                            .toggleStyle(.switch)
+                            
+                            if !powerService.isPasswordlessConfigured {
+                                Button {
+                                    powerService.setupPasswordlessRule { success in
+                                        // updated
+                                    }
+                                } label: {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "lock.shield")
+                                            .font(.system(size: 9.5))
+                                        Text("Enable 1-Click Toggle (No Password)")
+                                            .font(.system(size: 9.5))
+                                    }
+                                    .foregroundStyle(.blue)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.top, 1)
+                            }
+                        }
+                        
+                        Divider().opacity(0.4)
+                        
                         // Menu Bar Style Picker
                         HStack {
                             Text("Menu Bar Style")
@@ -138,6 +175,20 @@ public struct PopoverContentView: View {
                             
                             Spacer()
                             
+                            if powerService.isLowPowerMode {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "leaf.fill")
+                                        .font(.system(size: 8.5))
+                                    Text("Low Power")
+                                        .font(.system(size: 10, weight: .semibold))
+                                }
+                                .foregroundStyle(.yellow)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2.5)
+                                .background(Color.yellow.opacity(0.12))
+                                .clipShape(Capsule())
+                            }
+                            
                             if t.isPluggedIn {
                                 Text(t.isCharging ? "Charging" : (t.percentage >= 95 ? "Full" : "Plugged In"))
                                     .font(.system(size: 10.5, weight: .semibold))
@@ -149,7 +200,7 @@ public struct PopoverContentView: View {
                             }
                         }
                         
-                        Text(t.isPluggedIn ? "Connected to Power" : "Running on Battery Power")
+                        Text(t.isPluggedIn ? "Connected to Power" : (powerService.isLowPowerMode ? "Running in Low Power Mode" : "Running on Battery Power"))
                             .font(.system(size: 11.5, weight: .medium))
                             .foregroundStyle(.secondary)
                         
@@ -169,8 +220,8 @@ public struct PopoverContentView: View {
                         .frame(height: 6.5)
                         .padding(.top, 2)
                         
-                        // Remaining Time
-                        Text(t.isPluggedIn ? (t.isCharging && t.timeRemainingMinutes != nil ? "\(t.formattedTimeRemaining) to full" : "Power bypass active") : "\(t.formattedTimeRemaining) remaining")
+                        // Remaining Time or Bypass State (Clean, non-repeating)
+                        Text(t.isPluggedIn && !t.isCharging ? "Power bypass active" : t.timeRemainingDescription)
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                             .padding(.top, 1)

@@ -17,6 +17,8 @@ public final class PowerService: ObservableObject {
     @Published public private(set) var lastUpdated: Date = Date()
     @Published public private(set) var sampleTick: Int = 0
     @Published public private(set) var isWindowVisible: Bool = false
+    @Published public var isLowPowerMode: Bool = ProcessInfo.processInfo.isLowPowerModeEnabled
+    @Published public var isPasswordlessConfigured: Bool = false
     
     // Dedicated background queue for hardware telemetry polling
     private let telemetryQueue = DispatchQueue(label: "app.wolt.telemetry.queue", qos: .utility)
@@ -33,12 +35,24 @@ public final class PowerService: ObservableObject {
     public init() {
         // Initial immediate sample
         refresh()
+        checkPasswordlessConfig()
         
         // Start in relaxed background mode (10s interval)
         startMonitoring(intervalSeconds: 10.0)
         
         // Register instant kernel-level notification for AC power connect/disconnect
         setupHardwareNotification()
+        
+        // Register system notification for Low Power Mode changes
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name.NSProcessInfoPowerStateDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+            }
+        }
     }
     
     deinit {
@@ -84,6 +98,85 @@ public final class PowerService: ObservableObject {
         if let token = activityToken {
             ProcessInfo.processInfo.endActivity(token)
             activityToken = nil
+        }
+    }
+    
+    // MARK: - Low Power Mode Management
+    public func checkPasswordlessConfig() {
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: "/usr/bin/sudo")
+            task.arguments = ["-n", "/usr/sbin/pmset", "-g"]
+            var isConfigured = false
+            do {
+                try task.run()
+                task.waitUntilExit()
+                isConfigured = (task.terminationStatus == 0)
+            } catch {
+                isConfigured = false
+            }
+            Task { @MainActor [weak self] in
+                self?.isPasswordlessConfigured = isConfigured
+            }
+        }
+    }
+    
+    public func toggleLowPowerMode() {
+        setLowPowerMode(enabled: !isLowPowerMode)
+    }
+    
+    public func setLowPowerMode(enabled: Bool) {
+        let targetArg = enabled ? "1" : "0"
+        
+        // 1. Silent non-interactive attempt (0 prompts if passwordless is configured)
+        let silentProcess = Process()
+        silentProcess.executableURL = URL(fileURLWithPath: "/usr/bin/sudo")
+        silentProcess.arguments = ["-n", "/usr/sbin/pmset", "-a", "lowpowermode", targetArg]
+        
+        do {
+            try silentProcess.run()
+            silentProcess.waitUntilExit()
+            if silentProcess.terminationStatus == 0 {
+                self.isLowPowerMode = enabled
+                self.isPasswordlessConfigured = true
+                self.refresh()
+                return
+            }
+        } catch {
+            // Sudo password needed
+        }
+        
+        // 2. Fallback: prompt macOS native authentication (Touch ID / Admin password)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let scriptSource = "do shell script \"/usr/sbin/pmset -a lowpowermode \(targetArg)\" with administrator privileges"
+            var error: NSDictionary?
+            if let script = NSAppleScript(source: scriptSource) {
+                script.executeAndReturnError(&error)
+            }
+            Task { @MainActor [weak self] in
+                self?.isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+                self?.refresh()
+            }
+        }
+    }
+    
+    public func setupPasswordlessRule(completion: @escaping @Sendable (Bool) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let user = NSUserName()
+            let rule = "\(user) ALL=(ALL) NOPASSWD: /usr/sbin/pmset"
+            let scriptSource = "do shell script \"echo '\(rule)' > /etc/sudoers.d/wolt-pmset && chmod 0440 /etc/sudoers.d/wolt-pmset\" with administrator privileges"
+            var error: NSDictionary?
+            let success: Bool
+            if let script = NSAppleScript(source: scriptSource) {
+                script.executeAndReturnError(&error)
+                success = (error == nil)
+            } else {
+                success = false
+            }
+            Task { @MainActor [weak self] in
+                self?.checkPasswordlessConfig()
+                completion(success)
+            }
         }
     }
     
