@@ -47,10 +47,10 @@ struct MenuBarLabelView: View {
                 battLine = "├─ Battery Bypass: 0.0W"
             }
             let timeStr = t.timeRemainingMinutes != nil ? " • \(t.formattedTimeRemaining) to full" : ""
-            return "⚡ \(adapterStr)\nTotal Draw: \(inStr)\n\(battLine)\n└─ Mac System Load: \(sysStr)\nBattery: \(t.percentage)%\(timeStr)"
+            return "\(adapterStr)\nTotal Draw: \(inStr)\n\(battLine)\n└─ Mac System Load: \(sysStr)\nBattery: \(t.percentage)%\(timeStr)"
         } else {
             let flowStr = String(format: "%.1fW", t.systemLoadWatts > 0 ? t.systemLoadWatts : t.liveWatts)
-            return "🔋 Battery: \(t.percentage)% (Discharging)\nSystem Load: \(flowStr)\nRemaining: \(t.formattedTimeRemaining)"
+            return "Battery: \(t.percentage)% (Discharging)\nSystem Load: \(flowStr)\nRemaining: \(t.formattedTimeRemaining)"
         }
     }
     
