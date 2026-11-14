@@ -10,7 +10,7 @@ public enum WoltTab: String, CaseIterable, Identifiable {
     public var iconName: String {
         switch self {
         case .power: return "bolt.fill"
-        case .health: return "heart.text.square.fill"
+        case .health: return "heart.fill"
         case .settings: return "gearshape.fill"
         }
     }
@@ -22,6 +22,8 @@ public struct PopoverContentView: View {
     @ObservedObject var settings: AppSettings
     
     @State private var selectedTab: WoltTab = .power
+    @State private var hoveredTab: WoltTab? = nil
+    @Namespace private var tabNamespace
     
     public init() {
         self.powerService = PowerService.shared
@@ -109,26 +111,82 @@ public struct PopoverContentView: View {
             .padding(.horizontal, 4)
             .padding(.top, 4)
             
-            // Native Apple Segmented Tab Switcher
-            Picker("", selection: $selectedTab) {
+            // Custom Polished Animated Segmented Tab Switcher
+            HStack(spacing: 3) {
                 ForEach(WoltTab.allCases) { tab in
-                    Label(tab.rawValue, systemImage: tab.iconName).tag(tab)
+                    let isSelected = selectedTab == tab
+                    let isHovered = hoveredTab == tab && !isSelected
+                    
+                    Button {
+                        withAnimation(.spring(response: 0.30, dampingFraction: 0.82)) {
+                            selectedTab = tab
+                        }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: tab.iconName)
+                                .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                            Text(tab.rawValue)
+                                .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
+                        }
+                        .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
+                        .background {
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color(nsColor: .controlBackgroundColor))
+                                    .shadow(color: Color.black.opacity(0.12), radius: 3, x: 0, y: 1.5)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+                                    )
+                                    .matchedGeometryEffect(id: "activeTabIndicator", in: tabNamespace)
+                            } else if isHovered {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color.primary.opacity(0.04))
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovering in
+                        if hovering {
+                            hoveredTab = tab
+                        } else if hoveredTab == tab {
+                            hoveredTab = nil
+                        }
+                    }
                 }
             }
-            .pickerStyle(.segmented)
+            .padding(3)
+            .background(Color.primary.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             
-            // Tab Contents
-            Group {
+            // Tab Contents with Smooth Animated Transition
+            ZStack(alignment: .top) {
                 switch selectedTab {
                 case .power:
                     PowerFlowTabView(powerService: powerService)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.98)).combined(with: .offset(y: 4)),
+                            removal: .opacity
+                        ))
                 case .health:
                     HealthTabView(powerService: powerService)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.98)).combined(with: .offset(y: 4)),
+                            removal: .opacity
+                        ))
                 case .settings:
                     SettingsTabView(settings: settings, powerService: powerService)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.98)).combined(with: .offset(y: 4)),
+                            removal: .opacity
+                        ))
                 }
             }
-            .animation(.easeInOut(duration: 0.18), value: selectedTab)
+            .frame(maxWidth: .infinity, alignment: .top)
+            .animation(.spring(response: 0.30, dampingFraction: 0.85), value: selectedTab)
         }
         .padding(16)
         .frame(width: 330)
